@@ -1,53 +1,54 @@
 pipeline {
-    agent {label "iti-node" }      
+    agent any
+
+    environment {
+        DOCKER_CREDENTIALS = 'docker-hub'
+        IMAGE_NAME = "hossam23/jenkins-argo-nginx:${env.GIT_COMMIT}"
+    }
+
     stages {
-        stage('build') {
+
+        stage('Docker Login') {
             steps {
-                echo "Start Build Stage:build&Push Image"
                 script {
-                    if (BRANCH_NAME == "main") {
-     withCredentials([usernamePassword(credentialsId: 'DockerHub', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
-                    sh """
-                        
-                        docker login -u ${USERNAME} -p ${PASSWORD}
-                        docker build . -t hossam23/demo-app:v${BUILD_NUMBER}
-                        docker push hossam23/demo-app:v${BUILD_NUMBER}
-                                                    echo "Your Img.V:${BUILD_NUMBER}"
-                                                    echo "${BUILD_NUMBER}" > ../buildV.txt
-                    """
-                } 
-                    } else {
-                        echo "User choose  Branch: ${BRANCH_NAME}"
+                    docker.withRegistry('https://index.docker.io/v1/', DOCKER_CREDENTIALS) {
+                        echo 'Logged in to Docker Hub ✅'
                     }
                 }
             }
         }
-         stage ("deploy") {
-steps{
-           echo "Start Deploy Stage: Deploy Application"
-script {
-  if (BRANCH_NAME == "app") {
-                        withCredentials([file(credentialsId: 'kube-credentials', variable: 'KUBECONFIG')]) { 
-                               sh '''
-                          export BUILD_NUMBER=$(cat ../buildV.txt)
-             mv deployments/deployment.yml deployments/deployment.yml.tmp
-      cat deployments/deployment.yml.tmp | envsubst > deployments/deployment.yml
-                 rm -f deployments/deployment.yml.tmp
-           kubectl apply -f deployments --kubeconfig ${KUBECONFIG} -n ${BRANCH_NAME}
 
-           echo "Dployeed Sucess"
-                            '''
-                } 
-                    } else {
-                        echo "User choose  Branch: ${BRANCH_NAME}"
+        stage('Build Image') {
+            steps {
+                script {
+                    def app = docker.build("${IMAGE_NAME}")
+                }
+            }
+        }
+
+        stage('Trivy Scan') {
+            steps {
+                script {
+                    echo "Running Trivy Scan 🛡️"
+
+                    // Assuming Trivy is installed in your Jenkins agent
+                    sh "trivy image --exit-code 1 --severity HIGH,CRITICAL ${IMAGE_NAME}" // Fail the build if high/critical vulnerabilities are found
+
+                    echo "Trivy scan completed ✅"
+                }
+            }
+        }
+
+        stage('Push Image') {
+            steps {
+                script {
+                    docker.withRegistry('https://index.docker.io/v1/', DOCKER_CREDENTIALS) {
+                        def app = docker.image("${IMAGE_NAME}")
+                        app.push('latest')
+                        echo "Docker Image Was Pushed ✅"
                     }
-
-}
-
-}
+                }
+            }
+        }
     }
-    
-    }
-
-   
 }
