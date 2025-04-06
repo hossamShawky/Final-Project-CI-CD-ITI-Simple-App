@@ -3,9 +3,7 @@ pipeline {
 
     environment {
         DOCKER_CREDENTIALS = 'docker-hub'
-        // IMAGE_NAME = "hossam23/jenkins-argo-nginx:${env.GIT_COMMIT}"
-        
-        IMAGE_NAME = "hossam23/jenkins-argo-nginx:${env.BUILD_NUMBER}"
+        IMAGE_NAME = "hossam23/jenkins-argo-nginx:${env.GIT_COMMIT}"
     }
 
     stages {
@@ -28,24 +26,14 @@ pipeline {
             }
         }
 
-        stage('Install Trivy') {
-            steps {
-                script {
-                    // Install Trivy in the pipeline if it's not available
-                    sh 'curl -sSL https://github.com/aquasecurity/trivy/releases/download/v0.22.0/trivy_0.22.0_Linux-64bit.deb -o trivy.deb'
-                    sh 'sudo dpkg -i trivy.deb'
-                }
-            }
-        }
-
         stage('Trivy Scan') {
             steps {
                 script {
                     echo "Running Trivy Scan 🛡️"
-                    
-                    // Run Trivy scan with exit code 1 on high/critical vulnerabilities
-                    sh "trivy image --exit-code 1 --severity HIGH,CRITICAL ${IMAGE_NAME}"
-                    
+
+                    // Assuming Trivy is installed in your Jenkins agent
+                    sh "trivy image --exit-code 1 --severity HIGH,CRITICAL ${IMAGE_NAME}" // Fail the build if high/critical vulnerabilities are found
+
                     echo "Trivy scan completed ✅"
                 }
             }
