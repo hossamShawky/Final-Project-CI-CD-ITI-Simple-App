@@ -15,7 +15,7 @@ spec:
         app: demo-app
     spec:
       containers:
-      - image: hossam23/demo-app:v6
+      - image: hossam23/jenkins-argo-nginx
         name: demo-app
         imagePullPolicy: Always
         ports:
