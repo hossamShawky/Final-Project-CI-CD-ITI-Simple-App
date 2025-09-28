@@ -12,6 +12,6 @@ spec:
     targetPort: 80
   selector:
     app: demo-app
-  type: LoadBalancer
+  type: NodePort # LoadBalancer
 status:
   loadBalancer: {}
